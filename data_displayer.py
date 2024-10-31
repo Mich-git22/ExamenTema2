@@ -1,62 +1,43 @@
-# data_displayer.py
-import tkinter as tk
+import tkinter as tk  # Importa la biblioteca principal de Tkinter
+from record_table import RecordTable  # Importa la clase para mostrar la tabla de registros
+from input_frame import InputFrame  # Importa la clase para el marco de entrada
+from api_handler import APIHandler  # Importa el manejador de API
 
-class DataDisplayer:
-    def __init__(self, data):
-        self.data = data
-        self.index = 0  # Índice para rastrear el registro actual
+class DataDisplayer:  # Clase para gestionar la interfaz y mostrar datos
+    def __init__(self, api_handler):  #Inicializador de la clase
+        self.api_handler = api_handler  #Almacena el manejador de API
+        self.root = tk.Tk()  #Crea la ventana principal
+        self.root.title("Aplicación de Registros")  #Establece el título de la ventana
+        self.root.resizable(False, False)  #Desactiva el cambio de tamaño de la ventana
+        self.setup_ui()  #Configura la interfaz de usuario
 
-    def display_data(self):
-        # Crear la ventana principal de Tkinter
-        self.root = tk.Tk()
-        self.root.title("Registros de Datos")
+    def setup_ui(self):  # Método para configurar la interfaz
+        self.table = RecordTable(self.root)  #Crea la tabla de registros
+        self.table.pack(padx=20, pady=20)  #Ajusta el espacio alrededor de la tabla
 
-        # Contador de registros
-        total_records = len(self.data)
-        self.record_label = tk.Label(self.root, text=f"Total de registros: {total_records}")
-        self.record_label.pack(pady=10)
+        #Crea el marco de entrada y vincula funciones para mostrar registros
+        self.input_frame = InputFrame(self.root, self.show_selected_record, self.show_all_records, self.refresh_records)
+        self.input_frame.frame.pack(pady=10)  #Ajusta el espacio alrededor del marco de entrada
 
-        # Label para mostrar el contenido del registro actual
-        self.record_text = tk.StringVar()
-        self.record_label_content = tk.Label(self.root, textvariable=self.record_text, anchor="w", justify="left")
-        self.record_label_content.pack(padx=20, pady=10)
+        self.show_all_records()  #Muestra todos los registros al iniciar
 
-        # Botones de navegación
-        self.prev_button = tk.Button(self.root, text="Anterior", command=self.show_previous, state="disabled")
-        self.prev_button.pack(side="left", padx=20, pady=20)
+    def show_selected_record(self):  # Muestra el registro seleccionado por ID
+        try:
+            selected_id = int(self.input_frame.get_id())  #Obtiene el ID ingresado
+            #Filtra y muestra el registro correspondiente
+            self.table.insert_data(
+                [record for record in self.fetch_data() if int(record["Id"]) == selected_id])
+        except ValueError:  #Maneja el caso de un ID no válido
+            print("Ingrese un ID válido")
 
-        self.next_button = tk.Button(self.root, text="Siguiente", command=self.show_next)
-        self.next_button.pack(side="right", padx=20, pady=20)
+    def show_all_records(self):  #Muestra todos los registros
+        self.table.insert_data(self.fetch_data())  #Inserta los datos obtenidos en la tabla
 
-        # Muestra el primer registro
-        self.update_record_display()
+    def fetch_data(self):  #Método para obtener datos de la API
+        return self.api_handler.fetch_data()  #Llama al método de API para obtener datos
 
-        # Ejecutar la ventana de Tkinter
-        self.root.mainloop()
+    def refresh_records(self):  #Refresca los registros en la tabla
+        self.show_all_records()  #Vuelve a mostrar todos los registros
 
-    def update_record_display(self):
-        # Obtener el registro actual y actualizar el contenido en pantalla
-        record = self.data[self.index]
-        text = (
-            f"Registro {self.index + 1}:\n\n"
-            f"Mensaje ID: {record.get('mensajeId', 'N/A')}\n"
-            f"Nombre: {record.get('nombre', 'N/A')}\n"
-            f"Lugar de Origen: {record.get('lugarOrigen', 'N/A')}\n"
-            f"Motivo del Mensaje: {record.get('motivoMensaje', 'N/A')}\n"
-            f"ID: {self.index + 1}\n"
-        )
-        self.record_text.set(text)
-
-        # Actualizar el estado de los botones
-        self.prev_button["state"] = "normal" if self.index > 0 else "disabled"
-        self.next_button["state"] = "normal" if self.index < len(self.data) - 1 else "disabled"
-
-    def show_previous(self):
-        if self.index > 0:
-            self.index -= 1
-            self.update_record_display()
-
-    def show_next(self):
-        if self.index < len(self.data) - 1:
-            self.index += 1
-            self.update_record_display()
+    def run(self):  #Método para ejecutar la aplicación
+        self.root.mainloop()  #Inicia el bucle principal de la interfaz
